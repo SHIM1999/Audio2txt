@@ -1,5 +1,6 @@
 param(
-  [string]$Version = "0.1.0"
+  [string]$Version = "0.1.0",
+  [switch]$RebuildPython
 )
 
 $ErrorActionPreference = "Stop"
@@ -23,25 +24,28 @@ Push-Location $root
 try {
   npm run build
   npx pkg server/package-entry.cjs --targets node18-win-x64 --output $nodeExe
-  py -3.12 -m PyInstaller `
-    --onefile `
-    --name transcribe `
-    --distpath dist-python `
-    --workpath .release/pyinstaller-build `
-    --specpath .release/pyinstaller-spec `
-    --exclude-module torch `
-    --exclude-module torchaudio `
-    --exclude-module torchvision `
-    --exclude-module tensorflow `
-    --exclude-module fastapi `
-    --exclude-module gradio `
-    --exclude-module duckdb `
-    --exclude-module tensorboardX `
-    --exclude-module tvm `
-    --exclude-module opennmt `
-    --exclude-module fairseq `
-    --noconfirm `
-    scripts/transcribe.py
+
+  if ($RebuildPython -or -not (Test-Path -LiteralPath $pythonExeSource -PathType Leaf)) {
+    py -3.12 -m PyInstaller `
+      --onefile `
+      --name transcribe `
+      --distpath dist-python `
+      --workpath .release/pyinstaller-build `
+      --specpath .release/pyinstaller-spec `
+      --exclude-module torch `
+      --exclude-module torchaudio `
+      --exclude-module torchvision `
+      --exclude-module tensorflow `
+      --exclude-module fastapi `
+      --exclude-module gradio `
+      --exclude-module duckdb `
+      --exclude-module tensorboardX `
+      --exclude-module tvm `
+      --exclude-module opennmt `
+      --exclude-module fairseq `
+      --noconfirm `
+      scripts/transcribe.py
+  }
 } finally {
   Pop-Location
 }
