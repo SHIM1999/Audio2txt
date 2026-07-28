@@ -6,9 +6,9 @@ $ErrorActionPreference = "Stop"
 
 $root = Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..")
 $releaseRoot = Join-Path $root ".release"
-$packageRoot = Join-Path $releaseRoot "totext"
+$packageRoot = Join-Path $releaseRoot "Audio2txt"
 $outDir = Join-Path $root "packages"
-$zipPath = Join-Path $outDir "totext-v$Version-source.zip"
+$zipPath = Join-Path $outDir "audio2txt-v$Version-source.zip"
 
 if (Test-Path -LiteralPath $releaseRoot) {
   Remove-Item -LiteralPath $releaseRoot -Recurse -Force

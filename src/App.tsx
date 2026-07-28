@@ -45,7 +45,7 @@ type UpdateStatus = {
 const apiUrl = 'http://localhost:3001/api/transcribe'
 const updateCheckUrl = 'http://localhost:3001/api/update/check'
 const updateInstallUrl = 'http://localhost:3001/api/update/install'
-const appName = 'Lee Ai Speech to text v1'
+const appName = 'Audio2txt'
 
 function buildTimestampedText(segments: Segment[]) {
   return segments.map((segment) => `[${segment.start} - ${segment.end}] ${segment.text}`).join('\n')

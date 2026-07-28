@@ -1,4 +1,4 @@
-# ToText
+# Audio2txt
 
 A local web app for turning Korean audio files into timestamped text.
 
@@ -69,7 +69,7 @@ When this project is published to GitHub, install it once with:
 
 ```bash
 git clone <repo-url>
-cd totext
+cd Audio2txt
 install-windows.bat
 ```
 
@@ -92,7 +92,7 @@ powershell -ExecutionPolicy Bypass -File scripts/package-windows.ps1
 The ZIP is written to:
 
 ```text
-packages/totext-v0.1.0-source.zip
+packages/audio2txt-v0.1.0-source.zip
 ```
 
 The package intentionally excludes `node_modules`, `dist`, `.venv`, cache folders,

@@ -227,7 +227,7 @@ async function fetchLatestGitHubCommit(repoPath, branch) {
   const response = await fetch(`https://api.github.com/repos/${repoPath}/commits/${branch}`, {
     headers: {
       Accept: 'application/vnd.github+json',
-      'User-Agent': 'totext-updater',
+      'User-Agent': 'audio2txt-updater',
     },
   })
 

@@ -13,5 +13,5 @@ if not exist dist (
   if errorlevel 1 exit /b 1
 )
 
-echo Starting ToText at http://localhost:3001
+echo Starting Audio2txt at http://localhost:3001
 call npm run server
