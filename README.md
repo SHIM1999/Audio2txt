@@ -98,6 +98,28 @@ packages/audio2txt-v0.1.0-source.zip
 The package intentionally excludes `node_modules`, `dist`, `.venv`, cache folders,
 and uploaded audio files.
 
+## Create A Portable Windows ZIP
+
+This creates a larger package with a Windows launcher executable for the Node server:
+
+```powershell
+npm run package:portable
+```
+
+The ZIP is written to:
+
+```text
+packages/audio2txt-v0.1.0-windows-portable.zip
+```
+
+Users still need Python 3.12 and the Python dependency from `requirements.txt`.
+Inside the portable folder they can run:
+
+```text
+Install Python Dependencies.bat
+Audio2txt.bat
+```
+
 ## Configuration
 
 By default, the backend runs Python with `py -3.12` on Windows and `python3` elsewhere.

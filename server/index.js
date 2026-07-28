@@ -8,7 +8,7 @@ import { spawn } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const rootDir = path.resolve(__dirname, '..')
+const rootDir = process.env.AUDIO2TXT_PORTABLE_ROOT || path.resolve(__dirname, '..')
 const uploadDir = path.join(rootDir, 'uploads')
 const distDir = path.join(rootDir, 'dist')
 const packageJson = JSON.parse(fs.readFileSync(path.join(rootDir, 'package.json'), 'utf8'))

@@ -17,6 +17,7 @@ packages
 .venv
 __pycache__
 scripts/__pycache__
+*.exe
 
 # Editor directories and files
 .vscode/*

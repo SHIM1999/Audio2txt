@@ -9,7 +9,8 @@
     "server": "node server/index.js",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "package:portable": "powershell -ExecutionPolicy Bypass -File scripts/package-portable-windows.ps1"
   },
   "dependencies": {
     "concurrently": "^10.0.3",
@@ -28,6 +29,7 @@
     "@vitejs/plugin-react": "^6.0.3",
     "oxlint": "^1.71.0",
     "typescript": "~6.0.2",
-    "vite": "^8.1.1"
+    "vite": "^8.1.1",
+    "pkg": "^5.8.1"
   }
 }
