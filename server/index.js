@@ -122,9 +122,8 @@ function sanitizeChoice(value, choices, fallback) {
 
 function runTranscriber({ inputPath, model, language, device, jobId }) {
   return new Promise((resolve, reject) => {
-    const python = getPythonCommand()
+    const transcriber = getTranscriberCommand()
     const args = [
-      path.join(rootDir, 'scripts', 'transcribe.py'),
       '--audio',
       inputPath,
       '--model',
@@ -137,7 +136,7 @@ function runTranscriber({ inputPath, model, language, device, jobId }) {
       jobId,
     ]
 
-    const child = spawn(python.command, [...python.args, ...args], {
+    const child = spawn(transcriber.command, [...transcriber.args, ...args], {
       cwd: rootDir,
       windowsHide: true,
     })
@@ -154,7 +153,7 @@ function runTranscriber({ inputPath, model, language, device, jobId }) {
     })
 
     child.on('error', (error) => {
-      reject(new Error(`Could not start Python: ${error.message}`))
+      reject(new Error(`Could not start transcriber: ${error.message}`))
     })
 
     child.on('close', (code) => {
@@ -170,6 +169,19 @@ function runTranscriber({ inputPath, model, language, device, jobId }) {
       }
     })
   })
+}
+
+function getTranscriberCommand() {
+  const exePath = path.join(rootDir, 'scripts', process.platform === 'win32' ? 'transcribe.exe' : 'transcribe')
+  if (fs.existsSync(exePath)) {
+    return { command: exePath, args: [] }
+  }
+
+  const python = getPythonCommand()
+  return {
+    command: python.command,
+    args: [...python.args, path.join(rootDir, 'scripts', 'transcribe.py')],
+  }
 }
 
 function getPythonCommand() {

@@ -10,6 +10,7 @@ $portableRoot = Join-Path $releaseRoot "Audio2txt-portable"
 $outDir = Join-Path $root "packages"
 $zipPath = Join-Path $outDir "audio2txt-v$Version-windows-portable.zip"
 $nodeExe = Join-Path $portableRoot "audio2txt.exe"
+$pythonExeSource = Join-Path $root "dist-python\transcribe.exe"
 
 if (Test-Path -LiteralPath $releaseRoot) {
   Remove-Item -LiteralPath $releaseRoot -Recurse -Force
@@ -22,6 +23,25 @@ Push-Location $root
 try {
   npm run build
   npx pkg server/package-entry.cjs --targets node18-win-x64 --output $nodeExe
+  py -3.12 -m PyInstaller `
+    --onefile `
+    --name transcribe `
+    --distpath dist-python `
+    --workpath .release/pyinstaller-build `
+    --specpath .release/pyinstaller-spec `
+    --exclude-module torch `
+    --exclude-module torchaudio `
+    --exclude-module torchvision `
+    --exclude-module tensorflow `
+    --exclude-module fastapi `
+    --exclude-module gradio `
+    --exclude-module duckdb `
+    --exclude-module tensorboardX `
+    --exclude-module tvm `
+    --exclude-module opennmt `
+    --exclude-module fairseq `
+    --noconfirm `
+    scripts/transcribe.py
 } finally {
   Pop-Location
 }
@@ -47,6 +67,10 @@ foreach ($item in $items) {
   }
 }
 
+if (Test-Path -LiteralPath $pythonExeSource -PathType Leaf) {
+  Copy-Item -LiteralPath $pythonExeSource -Destination (Join-Path $portableRoot "scripts\transcribe.exe") -Force
+}
+
 Get-ChildItem -LiteralPath $portableRoot -Recurse -Force -Directory |
   Where-Object { $_.Name -in @("__pycache__", ".venv", "node_modules", "uploads") } |
   Sort-Object FullName -Descending |
@@ -59,15 +83,6 @@ echo Starting Audio2txt...
 start "" "http://localhost:3001"
 audio2txt.exe
 "@ | Set-Content -LiteralPath (Join-Path $portableRoot "Audio2txt.bat") -Encoding ASCII
-
-@"
-@echo off
-setlocal
-echo Installing Python dependencies for Audio2txt...
-py -3.12 -m pip install -r requirements.txt
-if errorlevel 1 exit /b 1
-echo Done. Run Audio2txt.bat
-"@ | Set-Content -LiteralPath (Join-Path $portableRoot "Install Python Dependencies.bat") -Encoding ASCII
 
 if (Test-Path -LiteralPath $zipPath) {
   Remove-Item -LiteralPath $zipPath -Force

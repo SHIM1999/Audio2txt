@@ -100,7 +100,8 @@ and uploaded audio files.
 
 ## Create A Portable Windows ZIP
 
-This creates a larger package with a Windows launcher executable for the Node server:
+This creates a larger package with a Windows launcher executable for the Node
+server and a bundled Python transcriber executable:
 
 ```powershell
 npm run package:portable
@@ -112,13 +113,13 @@ The ZIP is written to:
 packages/audio2txt-v0.1.0-windows-portable.zip
 ```
 
-Users still need Python 3.12 and the Python dependency from `requirements.txt`.
-Inside the portable folder they can run:
+Inside the portable folder users can run:
 
 ```text
-Install Python Dependencies.bat
 Audio2txt.bat
 ```
+
+The first transcription may still download Whisper model files.
 
 ## Configuration
 
