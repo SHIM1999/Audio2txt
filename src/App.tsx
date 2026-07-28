@@ -7,6 +7,7 @@ import {
   FileText,
   Languages,
   LoaderCircle,
+  RefreshCw,
   Upload,
 } from 'lucide-react'
 import './App.css'
@@ -30,7 +31,20 @@ type TranscriptResult = {
   plainText: string
 }
 
+type UpdateStatus = {
+  currentVersion: string
+  currentCommit: string
+  localBranch?: string
+  remoteCommit?: string
+  remoteDate?: string
+  updateAvailable: boolean
+  canInstall: boolean
+  message: string
+}
+
 const apiUrl = 'http://localhost:3001/api/transcribe'
+const updateCheckUrl = 'http://localhost:3001/api/update/check'
+const updateInstallUrl = 'http://localhost:3001/api/update/install'
 const appName = 'Lee Ai Speech to text v1'
 
 function buildTimestampedText(segments: Segment[]) {
@@ -54,7 +68,10 @@ function App() {
   const [device, setDevice] = useState('auto')
   const [isDragging, setIsDragging] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false)
+  const [isInstallingUpdate, setIsInstallingUpdate] = useState(false)
   const [error, setError] = useState('')
+  const [updateStatus, setUpdateStatus] = useState<UpdateStatus | null>(null)
   const [result, setResult] = useState<TranscriptResult | null>(null)
 
   const duration = useMemo(() => {
@@ -149,6 +166,63 @@ function App() {
     await navigator.clipboard.writeText(transcriptText)
   }
 
+  async function checkForUpdates() {
+    setIsCheckingUpdate(true)
+    setUpdateStatus(null)
+
+    try {
+      const response = await fetch(updateCheckUrl)
+      const payload = await response.json()
+
+      if (!response.ok) {
+        throw new Error(payload.error || 'Could not check for updates.')
+      }
+
+      setUpdateStatus(payload)
+    } catch (caught) {
+      setUpdateStatus({
+        currentVersion: 'unknown',
+        currentCommit: 'unknown',
+        updateAvailable: false,
+        canInstall: false,
+        message: caught instanceof Error ? caught.message : 'Could not check for updates.',
+      })
+    } finally {
+      setIsCheckingUpdate(false)
+    }
+  }
+
+  async function installUpdate() {
+    setIsInstallingUpdate(true)
+
+    try {
+      const response = await fetch(updateInstallUrl, { method: 'POST' })
+      const payload = await response.json()
+
+      if (!response.ok) {
+        throw new Error(payload.error || 'Could not install update.')
+      }
+
+      setUpdateStatus((current) => ({
+        currentVersion: current?.currentVersion || 'updated',
+        currentCommit: payload.currentCommit,
+        updateAvailable: false,
+        canInstall: false,
+        message: payload.message,
+      }))
+    } catch (caught) {
+      setUpdateStatus((current) => ({
+        currentVersion: current?.currentVersion || 'unknown',
+        currentCommit: current?.currentCommit || 'unknown',
+        updateAvailable: current?.updateAvailable || false,
+        canInstall: current?.canInstall || false,
+        message: caught instanceof Error ? caught.message : 'Could not install update.',
+      }))
+    } finally {
+      setIsInstallingUpdate(false)
+    }
+  }
+
   function exportTxt() {
     if (!result) return
     const blob = new Blob([transcriptText], {
@@ -224,6 +298,31 @@ function App() {
           <div className="status-pill">
             <Languages size={18} aria-hidden="true" />
             Editable local AI
+          </div>
+        </div>
+
+        <div className="update-strip">
+          <div>
+            <strong>App updates</strong>
+            <span>
+              {updateStatus
+                ? `${updateStatus.message}${updateStatus.remoteCommit ? ` Remote ${updateStatus.remoteCommit}` : ''}`
+                : 'Check whether a newer GitHub version is available.'}
+            </span>
+          </div>
+          <div className="update-actions">
+            <button type="button" onClick={checkForUpdates} disabled={isCheckingUpdate || isInstallingUpdate}>
+              <RefreshCw className={isCheckingUpdate ? 'spin' : ''} size={17} aria-hidden="true" />
+              {isCheckingUpdate ? 'Checking...' : 'Check'}
+            </button>
+            <button
+              type="button"
+              onClick={installUpdate}
+              disabled={!updateStatus?.updateAvailable || !updateStatus.canInstall || isInstallingUpdate}
+            >
+              <Download size={17} aria-hidden="true" />
+              {isInstallingUpdate ? 'Installing...' : 'Install'}
+            </button>
           </div>
         </div>
 
