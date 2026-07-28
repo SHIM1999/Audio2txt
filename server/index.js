@@ -12,6 +12,9 @@ const rootDir = process.env.AUDIO2TXT_PORTABLE_ROOT || path.resolve(__dirname, '
 const uploadDir = path.join(rootDir, 'uploads')
 const distDir = path.join(rootDir, 'dist')
 const packageJson = JSON.parse(fs.readFileSync(path.join(rootDir, 'package.json'), 'utf8'))
+const releaseRepo = 'SHIM1999/Audio2txt'
+const releasesUrl = `https://github.com/${releaseRepo}/releases/latest`
+const isPortable = Boolean(process.env.AUDIO2TXT_PORTABLE_ROOT)
 
 fs.mkdirSync(uploadDir, { recursive: true })
 
@@ -36,6 +39,25 @@ app.get('/api/health', (_req, res) => {
 
 app.get('/api/update/check', async (_req, res) => {
   try {
+    const latestRelease = await fetchLatestGitHubRelease()
+    const updateAvailable = compareVersions(latestRelease.version, packageJson.version) > 0
+
+    if (isPortable) {
+      res.json({
+        currentVersion: packageJson.version,
+        latestVersion: latestRelease.version,
+        releaseUrl: latestRelease.url,
+        assetName: latestRelease.assetName,
+        updateAvailable,
+        canInstall: false,
+        mode: 'portable',
+        message: updateAvailable
+          ? `Version ${latestRelease.version} is available. Download the newest portable ZIP.`
+          : 'You are on the latest portable release.',
+      })
+      return
+    }
+
     const currentCommit = await runCommand('git', ['rev-parse', '--short', 'HEAD'])
     const localBranch = await runCommand('git', ['branch', '--show-current'])
     const remoteUrl = await runCommand('git', ['config', '--get', 'remote.origin.url'])
@@ -57,6 +79,7 @@ app.get('/api/update/check', async (_req, res) => {
 
     res.json({
       currentVersion: packageJson.version,
+      latestVersion: latestRelease.version,
       currentCommit,
       localBranch,
       remoteUrl,
@@ -74,6 +97,14 @@ app.get('/api/update/check', async (_req, res) => {
 })
 
 app.post('/api/update/install', async (_req, res) => {
+  if (isPortable) {
+    res.status(400).json({
+      releaseUrl: releasesUrl,
+      error: 'Portable builds update by downloading the newest Release ZIP.',
+    })
+    return
+  }
+
   try {
     await runCommand('git', ['pull', '--ff-only'])
     await runCommand(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['install'])
@@ -252,6 +283,41 @@ async function fetchLatestGitHubCommit(repoPath, branch) {
     sha: payload.sha,
     date: payload.commit?.committer?.date || '',
   }
+}
+
+async function fetchLatestGitHubRelease() {
+  const response = await fetch(`https://api.github.com/repos/${releaseRepo}/releases/latest`, {
+    headers: {
+      Accept: 'application/vnd.github+json',
+      'User-Agent': 'audio2txt-updater',
+    },
+  })
+
+  if (!response.ok) {
+    throw new Error(`GitHub release check failed: ${response.status}`)
+  }
+
+  const payload = await response.json()
+  const version = String(payload.tag_name || '').replace(/^v/i, '')
+  const asset = payload.assets?.find((item) => item.name?.includes('windows-portable')) || payload.assets?.[0]
+  return {
+    version,
+    url: payload.html_url || releasesUrl,
+    assetName: asset?.name || '',
+  }
+}
+
+function compareVersions(a, b) {
+  const left = String(a).split('.').map((part) => Number(part) || 0)
+  const right = String(b).split('.').map((part) => Number(part) || 0)
+  const length = Math.max(left.length, right.length)
+
+  for (let index = 0; index < length; index += 1) {
+    if ((left[index] || 0) > (right[index] || 0)) return 1
+    if ((left[index] || 0) < (right[index] || 0)) return -1
+  }
+
+  return 0
 }
 
 if (fs.existsSync(path.join(distDir, 'index.html'))) {

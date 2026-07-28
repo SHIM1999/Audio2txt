@@ -34,9 +34,13 @@ type TranscriptResult = {
 type UpdateStatus = {
   currentVersion: string
   currentCommit: string
+  latestVersion?: string
   localBranch?: string
   remoteCommit?: string
   remoteDate?: string
+  releaseUrl?: string
+  assetName?: string
+  mode?: 'portable' | 'git'
   updateAvailable: boolean
   canInstall: boolean
   message: string
@@ -223,6 +227,11 @@ function App() {
     }
   }
 
+  function openRelease() {
+    if (!updateStatus?.releaseUrl) return
+    window.open(updateStatus.releaseUrl, '_blank', 'noopener,noreferrer')
+  }
+
   function exportTxt() {
     if (!result) return
     const blob = new Blob([transcriptText], {
@@ -306,8 +315,8 @@ function App() {
             <strong>App updates</strong>
             <span>
               {updateStatus
-                ? `${updateStatus.message}${updateStatus.remoteCommit ? ` Remote ${updateStatus.remoteCommit}` : ''}`
-                : 'Check whether a newer GitHub version is available.'}
+                ? `${updateStatus.message}${updateStatus.assetName ? ` Asset: ${updateStatus.assetName}` : ''}`
+                : 'Portable users download newer releases. Git users can install updates here.'}
             </span>
           </div>
           <div className="update-actions">
@@ -317,11 +326,15 @@ function App() {
             </button>
             <button
               type="button"
-              onClick={installUpdate}
-              disabled={!updateStatus?.updateAvailable || !updateStatus.canInstall || isInstallingUpdate}
+              onClick={updateStatus?.canInstall ? installUpdate : openRelease}
+              disabled={
+                !updateStatus?.updateAvailable ||
+                (!updateStatus.canInstall && !updateStatus.releaseUrl) ||
+                isInstallingUpdate
+              }
             >
               <Download size={17} aria-hidden="true" />
-              {isInstallingUpdate ? 'Installing...' : 'Install'}
+              {isInstallingUpdate ? 'Installing...' : updateStatus?.canInstall ? 'Install' : 'Open release'}
             </button>
           </div>
         </div>
