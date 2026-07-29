@@ -11,10 +11,14 @@ node_modules
 dist
 dist-ssr
 dist-python
+desktop-release
+desktop-release-*
+desktop-release-packager
 *.local
 uploads
 packages
 .release
+.electron-app
 .venv
 __pycache__
 scripts/__pycache__

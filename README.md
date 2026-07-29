@@ -126,6 +126,21 @@ CPU and during first model download.
 Portable users update by downloading the newest ZIP from GitHub Releases. They
 do not need Git, Node.js, Python, or `update-windows.bat`.
 
+## Electron Product Branch
+
+The `electron-product` branch wraps the same React UI and local transcription
+API in an Electron desktop shell. It packages app code into ASAR and copies the
+Python `transcribe-runtime` folder as executable resources.
+
+```powershell
+npm run electron
+npm run build:electron
+```
+
+The first desktop milestone writes an unpacked Windows app to
+`desktop-release-packager\Audio2txt-win32-x64`. Installer-based updates are the
+next milestone after the Electron shell is stable.
+
 ## Configuration
 
 By default, the backend runs Python with `py -3.12` on Windows and `python3` elsewhere.
