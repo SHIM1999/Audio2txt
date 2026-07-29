@@ -1,7 +1,15 @@
 import argparse
 import json
+import os
 import sys
+import warnings
 from pathlib import Path
+
+os.environ.setdefault("HF_HUB_DISABLE_SYMLINKS_WARNING", "1")
+os.environ.setdefault("HF_HUB_DISABLE_TELEMETRY", "1")
+warnings.filterwarnings("ignore", message=".*cache-system uses symlinks.*")
+warnings.filterwarnings("ignore", message=".*Xet Storage is enabled.*")
+warnings.filterwarnings("ignore", message=".*unauthenticated requests.*")
 
 import ctranslate2
 from faster_whisper import WhisperModel
@@ -25,7 +33,7 @@ def resolve_runtime(device: str) -> tuple[str, str]:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Transcribe audio with timestamps.")
     parser.add_argument("--audio", required=True)
-    parser.add_argument("--model", default="small", choices=["tiny", "base", "small", "medium"])
+    parser.add_argument("--model", default="base", choices=["tiny", "base", "small", "medium"])
     parser.add_argument("--language", default="ko", choices=["ko", "auto"])
     parser.add_argument("--device", default="auto", choices=["auto", "cpu", "cuda"])
     parser.add_argument("--job-id", default="")

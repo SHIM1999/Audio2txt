@@ -92,7 +92,7 @@ powershell -ExecutionPolicy Bypass -File scripts/package-windows.ps1
 The ZIP is written to:
 
 ```text
-packages/audio2txt-v0.1.0-source.zip
+packages/audio2txt-v0.1.2-source.zip
 ```
 
 The package intentionally excludes `node_modules`, `dist`, `.venv`, cache folders,
@@ -110,7 +110,7 @@ npm run package:portable
 The ZIP is written to:
 
 ```text
-packages/audio2txt-v0.1.0-windows-portable.zip
+packages/audio2txt-v0.1.2-windows-portable.zip
 ```
 
 Inside the portable folder users can run:
@@ -119,7 +119,9 @@ Inside the portable folder users can run:
 Audio2txt.bat
 ```
 
-The first transcription may still download Whisper model files.
+The first transcription may still download Whisper model files. Use Tiny or Base
+for quick checks; Medium gives better quality but can take several minutes on
+CPU and during first model download.
 
 Portable users update by downloading the newest ZIP from GitHub Releases. They
 do not need Git, Node.js, Python, or `update-windows.bat`.

@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ChangeEvent, DragEvent } from 'react'
 import {
   Clipboard,
@@ -67,13 +67,14 @@ function downloadBlob(blob: Blob, filename: string) {
 function App() {
   const inputRef = useRef<HTMLInputElement>(null)
   const [file, setFile] = useState<File | null>(null)
-  const [model, setModel] = useState('small')
+  const [model, setModel] = useState('base')
   const [language, setLanguage] = useState('ko')
   const [device, setDevice] = useState('auto')
   const [isDragging, setIsDragging] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false)
   const [isInstallingUpdate, setIsInstallingUpdate] = useState(false)
+  const [elapsedSeconds, setElapsedSeconds] = useState(0)
   const [error, setError] = useState('')
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus | null>(null)
   const [result, setResult] = useState<TranscriptResult | null>(null)
@@ -91,6 +92,20 @@ function App() {
   }, [result])
 
   const baseName = useMemo(() => file?.name.replace(/\.[^.]+$/, '') || 'transcript', [file])
+
+  useEffect(() => {
+    if (!isLoading) {
+      setElapsedSeconds(0)
+      return undefined
+    }
+
+    const startedAt = Date.now()
+    const timer = window.setInterval(() => {
+      setElapsedSeconds(Math.floor((Date.now() - startedAt) / 1000))
+    }, 1000)
+
+    return () => window.clearInterval(timer)
+  }, [isLoading])
 
   function pickFile(nextFile?: File) {
     if (!nextFile) return
@@ -381,10 +396,14 @@ function App() {
             <label>
               Model
               <select value={model} onChange={(event) => setModel(event.target.value)}>
-                <option value="base">Base - faster</option>
+                <option value="tiny">Tiny - quickest test</option>
+                <option value="base">Base - fast default</option>
                 <option value="small">Small - balanced</option>
                 <option value="medium">Medium - higher quality</option>
               </select>
+              <span className="field-hint">
+                Medium is slow on first run. Tiny/Base are best for quick checks.
+              </span>
             </label>
 
             <label>
@@ -409,6 +428,7 @@ function App() {
               <strong>Processing audio</strong>
               <span>
                 {device === 'cpu' ? 'CPU' : device === 'cuda' ? 'GPU' : 'Auto engine'} is transcribing your file.
+                {' '}Elapsed {elapsedSeconds}s. First run may download the selected model.
               </span>
             </div>
             <div className="meter" aria-hidden="true">

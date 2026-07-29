@@ -131,7 +131,7 @@ app.post('/api/transcribe', upload.single('audio'), async (req, res) => {
 
   const jobId = randomUUID()
   const inputPath = req.file.path
-  const model = sanitizeChoice(req.body.model, ['tiny', 'base', 'small', 'medium'], 'small')
+  const model = sanitizeChoice(req.body.model, ['tiny', 'base', 'small', 'medium'], 'base')
   const language = sanitizeChoice(req.body.language, ['ko', 'auto'], 'ko')
   const device = sanitizeChoice(req.body.device, ['auto', 'cpu', 'cuda'], 'auto')
 
@@ -169,6 +169,7 @@ function runTranscriber({ inputPath, model, language, device, jobId }) {
 
     const child = spawn(transcriber.command, [...transcriber.args, ...args], {
       cwd: rootDir,
+      env: transcriberEnv(),
       windowsHide: true,
     })
 
@@ -189,7 +190,7 @@ function runTranscriber({ inputPath, model, language, device, jobId }) {
 
     child.on('close', (code) => {
       if (code !== 0) {
-        reject(new Error(stderr.trim() || `Transcriber exited with code ${code}.`))
+        reject(new Error(cleanTranscriberError(stderr) || `Transcriber exited with code ${code}.`))
         return
       }
 
@@ -200,6 +201,34 @@ function runTranscriber({ inputPath, model, language, device, jobId }) {
       }
     })
   })
+}
+
+function transcriberEnv() {
+  return {
+    ...process.env,
+    HF_HUB_DISABLE_SYMLINKS_WARNING: '1',
+    HF_HUB_DISABLE_TELEMETRY: '1',
+  }
+}
+
+function cleanTranscriberError(stderr) {
+  const ignored = [
+    /unauthenticated requests to the HF Hub/i,
+    /huggingface_hub[\\/]+file_download\.py/i,
+    /cache-system uses symlinks/i,
+    /HF_HUB_DISABLE_SYMLINKS_WARNING/i,
+    /Xet Storage is enabled/i,
+    /hf_xet package is not installed/i,
+    /pip install (?:huggingface_hub\[hf_xet\]|hf_xet)/i,
+    /enable-your-device-for-development/i,
+  ]
+
+  return stderr
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line && !ignored.some((pattern) => pattern.test(line)))
+    .join('\n')
+    .trim()
 }
 
 function getTranscriberCommand() {
