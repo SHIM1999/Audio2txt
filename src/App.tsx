@@ -29,6 +29,7 @@ type TranscriptResult = {
   segments: Segment[]
   timestampedText: string
   plainText: string
+  warning?: string
 }
 
 type UpdateStatus = {
@@ -438,6 +439,7 @@ function App() {
         )}
 
         {error && <div className="error">{error}</div>}
+        {result?.warning && <div className="notice">{result.warning}</div>}
 
         <section className="result-panel" aria-live="polite">
           <div className="result-header">

@@ -334,6 +334,15 @@ button:disabled {
   padding: 12px 14px;
 }
 
+.notice {
+  margin-bottom: 18px;
+  border: 1px solid #8dbbb3;
+  border-radius: 8px;
+  background: #f2fbf8;
+  color: #123e39;
+  padding: 12px 14px;
+}
+
 .result-panel {
   min-height: 380px;
   overflow: hidden;

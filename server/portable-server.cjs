@@ -78,7 +78,16 @@ app.post('/api/transcribe', upload.single('audio'), async (req, res) => {
   const device = sanitizeChoice(req.body.device, ['auto', 'cpu', 'cuda'], 'auto')
 
   try {
-    const result = await runTranscriber({ inputPath, model, language, device, jobId })
+    let result
+    try {
+      result = await runTranscriber({ inputPath, model, language, device, jobId })
+    } catch (error) {
+      if (!shouldRetryOnCpu(error, device)) throw error
+
+      result = await runTranscriber({ inputPath, model, language, device: 'cpu', jobId })
+      result.warning = 'Auto/GPU engine crashed, so Audio2txt retried safely with CPU. For this PC, choose CPU or Tiny/Base for faster stable runs.'
+    }
+
     res.json(result)
   } catch (error) {
     res.status(500).json({
@@ -132,7 +141,9 @@ function runTranscriber({ inputPath, model, language, device, jobId }) {
 
     child.on('close', (code) => {
       if (code !== 0) {
-        reject(new Error(cleanTranscriberError(stderr) || `Transcriber exited with code ${code}.`))
+        const error = new Error(buildTranscriberError(code, stderr))
+        error.transcriberExitCode = code
+        reject(error)
         return
       }
 
@@ -143,6 +154,21 @@ function runTranscriber({ inputPath, model, language, device, jobId }) {
       }
     })
   })
+}
+
+function shouldRetryOnCpu(error, device) {
+  return device !== 'cpu' && Number(error?.transcriberExitCode) === 3221225477
+}
+
+function buildTranscriberError(code, stderr) {
+  const cleaned = cleanTranscriberError(stderr)
+  if (cleaned) return cleaned
+
+  if (Number(code) === 3221225477) {
+    return 'The native transcription engine crashed on this PC. Try Engine: CPU and Model: Tiny or Base first.'
+  }
+
+  return `Transcriber exited with code ${code}.`
 }
 
 function transcriberEnv() {

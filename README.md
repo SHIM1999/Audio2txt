@@ -92,7 +92,7 @@ powershell -ExecutionPolicy Bypass -File scripts/package-windows.ps1
 The ZIP is written to:
 
 ```text
-packages/audio2txt-v0.1.2-source.zip
+packages/audio2txt-v0.1.3-source.zip
 ```
 
 The package intentionally excludes `node_modules`, `dist`, `.venv`, cache folders,
@@ -110,7 +110,7 @@ npm run package:portable
 The ZIP is written to:
 
 ```text
-packages/audio2txt-v0.1.2-windows-portable.zip
+packages/audio2txt-v0.1.3-windows-portable.zip
 ```
 
 Inside the portable folder users can run:
