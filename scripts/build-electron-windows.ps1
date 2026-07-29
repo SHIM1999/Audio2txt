@@ -21,6 +21,7 @@ try {
     --platform=win32 `
     --arch=x64 `
     --electron-version=$electronVersion `
+    --icon="$stage\build\icon.ico" `
     --out=$outDir `
     --overwrite `
     --asar `
@@ -30,6 +31,7 @@ try {
     --ignore="^/requirements.txt$" `
     --ignore="^/package-lock.json$" `
     --extra-resource="$stage\dist" `
+    --extra-resource="$stage\build" `
     --extra-resource="$stage\scripts" `
     --extra-resource="$stage\package.json" `
     --extra-resource="$stage\README.md" `

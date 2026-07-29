@@ -141,6 +141,8 @@ The desktop build writes an unpacked Windows app to
 `desktop-release-packager\Audio2txt-win32-x64` and installer/update artifacts to
 `desktop-release-installer`:
 
+The app icon is tracked in `build\icon.ico` and `build\icon.png`.
+
 ```text
 Audio2txt-Setup-0.1.4.exe
 Audio2txt-Setup-0.1.4.msi

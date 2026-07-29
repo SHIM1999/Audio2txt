@@ -7,6 +7,7 @@ const version = require(path.join(root, 'package.json')).version
 async function main() {
   const appDirectory = path.join(root, 'desktop-release-packager', 'Audio2txt-win32-x64')
   const outputDirectory = path.join(root, 'desktop-release-installer')
+  const iconPath = path.join(root, 'build', 'icon.ico')
 
   await createWindowsInstaller({
     appDirectory,
@@ -15,6 +16,7 @@ async function main() {
     exe: 'Audio2txt.exe',
     setupExe: `Audio2txt-Setup-${version}.exe`,
     setupMsi: `Audio2txt-Setup-${version}.msi`,
+    setupIcon: iconPath,
     noMsi: false,
     title: 'Audio2txt',
     loadingGif: '',

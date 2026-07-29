@@ -8,6 +8,7 @@ const path = require('node:path')
 const isDev = Boolean(process.env.AUDIO2TXT_ELECTRON_DEV)
 const appRoot = path.resolve(__dirname, '..')
 const resourceRoot = app.isPackaged ? process.resourcesPath : appRoot
+const iconPath = path.join(resourceRoot, 'build', 'icon.ico')
 const serverPort = Number(process.env.PORT || 3001)
 let mainWindow = null
 
@@ -30,6 +31,7 @@ function createWindow() {
     minWidth: 980,
     minHeight: 720,
     title: 'Audio2txt',
+    icon: iconPath,
     backgroundColor: '#f4faf8',
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),

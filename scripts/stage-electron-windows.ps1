@@ -19,6 +19,7 @@ New-Item -ItemType Directory -Force -Path (Join-Path $stage "scripts") | Out-Nul
 Copy-Item -LiteralPath (Join-Path $root "electron") -Destination (Join-Path $stage "electron") -Recurse -Force
 Copy-Item -LiteralPath (Join-Path $root "server") -Destination (Join-Path $stage "server") -Recurse -Force
 Copy-Item -LiteralPath (Join-Path $root "dist") -Destination (Join-Path $stage "dist") -Recurse -Force
+Copy-Item -LiteralPath (Join-Path $root "build") -Destination (Join-Path $stage "build") -Recurse -Force
 Copy-Item -LiteralPath (Join-Path $root "dist-python\transcribe") -Destination (Join-Path $stage "scripts\transcribe-runtime") -Recurse -Force
 Copy-Item -LiteralPath (Join-Path $root "requirements.txt") -Destination (Join-Path $stage "requirements.txt") -Force
 Copy-Item -LiteralPath (Join-Path $root "README.md") -Destination (Join-Path $stage "README.md") -Force
@@ -69,6 +70,7 @@ $electronPackage = [ordered]@{
     }
     extraResources = @(
       [ordered]@{ from = "dist"; to = "dist" },
+      [ordered]@{ from = "build"; to = "build" },
       [ordered]@{ from = "scripts/transcribe-runtime"; to = "scripts/transcribe-runtime" },
       [ordered]@{ from = "requirements.txt"; to = "requirements.txt" },
       [ordered]@{ from = "README.md"; to = "README.md" },
