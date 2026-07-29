@@ -121,6 +121,9 @@ Audio2txt.bat
 
 The first transcription may still download Whisper model files.
 
+Portable users update by downloading the newest ZIP from GitHub Releases. They
+do not need Git, Node.js, Python, or `update-windows.bat`.
+
 ## Configuration
 
 By default, the backend runs Python with `py -3.12` on Windows and `python3` elsewhere.

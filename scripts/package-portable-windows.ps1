@@ -52,12 +52,11 @@ try {
 
 $items = @(
   "dist",
-  "server",
   "scripts",
+  "package.json",
   "requirements.txt",
   "README.md",
-  "install-windows.bat",
-  "update-windows.bat"
+  "install-windows.bat"
 )
 
 foreach ($item in $items) {
@@ -84,8 +83,9 @@ Get-ChildItem -LiteralPath $portableRoot -Recurse -Force -Directory |
 @echo off
 setlocal
 echo Starting Audio2txt...
+start "Audio2txt Server" cmd /k audio2txt.exe
+timeout /t 3 /nobreak >nul
 start "" "http://localhost:3001"
-audio2txt.exe
 "@ | Set-Content -LiteralPath (Join-Path $portableRoot "Audio2txt.bat") -Encoding ASCII
 
 if (Test-Path -LiteralPath $zipPath) {
