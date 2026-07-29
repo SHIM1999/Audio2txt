@@ -5,12 +5,12 @@ import {
   Download,
   FileAudio,
   FileText,
-  Languages,
   LoaderCircle,
   RefreshCw,
   Upload,
 } from 'lucide-react'
 import './App.css'
+import MascotSticker from './MascotSticker'
 
 type Segment = {
   id: number
@@ -408,10 +408,7 @@ function App() {
             <p className="eyebrow">{appName}</p>
             <h1>Polish every line after AI transcription.</h1>
           </div>
-          <div className="status-pill">
-            <Languages size={18} aria-hidden="true" />
-            Editable local AI
-          </div>
+          <MascotSticker />
         </div>
 
         <div className="update-strip">

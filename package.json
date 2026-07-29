@@ -92,6 +92,7 @@
     "docx": "^9.7.1",
     "electron-squirrel-startup": "^1.0.1",
     "express": "^5.2.1",
+    "lottie-web": "^5.13.0",
     "lucide-react": "^1.25.0",
     "multer": "^2.2.0",
     "react": "^19.2.7",
