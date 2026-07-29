@@ -258,6 +258,16 @@ function cleanTranscriberError(stderr) {
 }
 
 function getTranscriberCommand() {
+  const sourceRuntimeExePath = path.join(rootDir, 'dist-python', 'transcribe', process.platform === 'win32' ? 'transcribe.exe' : 'transcribe')
+  if (fs.existsSync(sourceRuntimeExePath)) {
+    return { command: sourceRuntimeExePath, args: [] }
+  }
+
+  const portableRuntimeExePath = path.join(rootDir, 'scripts', 'transcribe-runtime', process.platform === 'win32' ? 'transcribe.exe' : 'transcribe')
+  if (fs.existsSync(portableRuntimeExePath)) {
+    return { command: portableRuntimeExePath, args: [] }
+  }
+
   const exePath = path.join(rootDir, 'scripts', process.platform === 'win32' ? 'transcribe.exe' : 'transcribe')
   if (fs.existsSync(exePath)) {
     return { command: exePath, args: [] }

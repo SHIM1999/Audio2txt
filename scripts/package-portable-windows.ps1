@@ -1,5 +1,5 @@
 param(
-  [string]$Version = "0.1.3",
+  [string]$Version = "0.1.4",
   [switch]$RebuildPython
 )
 
@@ -11,7 +11,8 @@ $portableRoot = Join-Path $releaseRoot "Audio2txt-portable"
 $outDir = Join-Path $root "packages"
 $zipPath = Join-Path $outDir "audio2txt-v$Version-windows-portable.zip"
 $nodeExe = Join-Path $portableRoot "audio2txt.exe"
-$pythonExeSource = Join-Path $root "dist-python\transcribe.exe"
+$pythonRuntimeSource = Join-Path $root "dist-python\transcribe"
+$pythonExeSource = Join-Path $pythonRuntimeSource "transcribe.exe"
 
 if (Test-Path -LiteralPath $releaseRoot) {
   Remove-Item -LiteralPath $releaseRoot -Recurse -Force
@@ -25,9 +26,13 @@ try {
   npm run build
   npx pkg server/package-entry.cjs --targets node18-win-x64 --output $nodeExe
 
+  if ($RebuildPython -and (Test-Path -LiteralPath $pythonRuntimeSource)) {
+    Remove-Item -LiteralPath $pythonRuntimeSource -Recurse -Force
+  }
+
   if ($RebuildPython -or -not (Test-Path -LiteralPath $pythonExeSource -PathType Leaf)) {
     py -3.12 -m PyInstaller `
-      --onefile `
+      --onedir `
       --name transcribe `
       --distpath dist-python `
       --workpath .release/pyinstaller-build `
@@ -43,6 +48,9 @@ try {
       --exclude-module tvm `
       --exclude-module opennmt `
       --exclude-module fairseq `
+      --exclude-module matplotlib `
+      --exclude-module PyQt5 `
+      --collect-data faster_whisper `
       --noconfirm `
       scripts/transcribe.py
   }
@@ -70,8 +78,12 @@ foreach ($item in $items) {
   }
 }
 
-if (Test-Path -LiteralPath $pythonExeSource -PathType Leaf) {
-  Copy-Item -LiteralPath $pythonExeSource -Destination (Join-Path $portableRoot "scripts\transcribe.exe") -Force
+if (Test-Path -LiteralPath (Join-Path $portableRoot "scripts\transcribe.exe") -PathType Leaf) {
+  Remove-Item -LiteralPath (Join-Path $portableRoot "scripts\transcribe.exe") -Force
+}
+
+if (Test-Path -LiteralPath $pythonRuntimeSource -PathType Container) {
+  Copy-Item -LiteralPath $pythonRuntimeSource -Destination (Join-Path $portableRoot "scripts\transcribe-runtime") -Recurse -Force
 }
 
 Get-ChildItem -LiteralPath $portableRoot -Recurse -Force -Directory |

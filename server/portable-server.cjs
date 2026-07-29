@@ -104,7 +104,7 @@ function sanitizeChoice(value, choices, fallback) {
 
 function runTranscriber({ inputPath, model, language, device, jobId }) {
   return new Promise((resolve, reject) => {
-    const transcriber = path.join(rootDir, 'scripts', 'transcribe.exe')
+    const transcriber = getTranscriberCommand()
     const args = [
       '--audio',
       inputPath,
@@ -118,7 +118,7 @@ function runTranscriber({ inputPath, model, language, device, jobId }) {
       jobId,
     ]
 
-    const child = spawn(transcriber, args, {
+    const child = spawn(transcriber.command, [...transcriber.args, ...args], {
       cwd: rootDir,
       env: transcriberEnv(),
       windowsHide: true,
@@ -197,6 +197,23 @@ function cleanTranscriberError(stderr) {
     .filter((line) => line && !ignored.some((pattern) => pattern.test(line)))
     .join('\n')
     .trim()
+}
+
+function getTranscriberCommand() {
+  const runtimeExePath = path.join(rootDir, 'scripts', 'transcribe-runtime', 'transcribe.exe')
+  if (fs.existsSync(runtimeExePath)) {
+    return { command: runtimeExePath, args: [] }
+  }
+
+  const exePath = path.join(rootDir, 'scripts', 'transcribe.exe')
+  if (fs.existsSync(exePath)) {
+    return { command: exePath, args: [] }
+  }
+
+  return {
+    command: process.platform === 'win32' ? 'py' : 'python3',
+    args: process.platform === 'win32' ? ['-3.12', path.join(rootDir, 'scripts', 'transcribe.py')] : [path.join(rootDir, 'scripts', 'transcribe.py')],
+  }
 }
 
 async function fetchLatestGitHubRelease() {
