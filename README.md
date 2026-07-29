@@ -92,7 +92,7 @@ powershell -ExecutionPolicy Bypass -File scripts/package-windows.ps1
 The ZIP is written to:
 
 ```text
-packages/audio2txt-v0.1.4-source.zip
+packages/audio2txt-v0.1.5-source.zip
 ```
 
 The package intentionally excludes `node_modules`, `dist`, `.venv`, cache folders,
@@ -110,7 +110,7 @@ npm run package:portable
 The ZIP is written to:
 
 ```text
-packages/audio2txt-v0.1.4-windows-portable.zip
+packages/audio2txt-v0.1.5-windows-portable.zip
 ```
 
 Inside the portable folder users can run:
@@ -144,9 +144,9 @@ The desktop build writes an unpacked Windows app to
 The app icon is tracked in `build\icon.ico` and `build\icon.png`.
 
 ```text
-Audio2txt-Setup-0.1.4.exe
-Audio2txt-Setup-0.1.4.msi
-audio2txt-0.1.4-full.nupkg
+Audio2txt-Setup-0.1.5.exe
+Audio2txt-Setup-0.1.5.msi
+audio2txt-0.1.5-full.nupkg
 RELEASES
 ```
 

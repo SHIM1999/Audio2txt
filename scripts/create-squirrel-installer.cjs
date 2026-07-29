@@ -19,7 +19,6 @@ async function main() {
     setupIcon: iconPath,
     noMsi: false,
     title: 'Audio2txt',
-    loadingGif: '',
   })
 
   console.log(`Created installer artifacts in ${outputDirectory}`)
