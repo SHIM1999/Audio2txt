@@ -137,9 +137,18 @@ npm run electron
 npm run build:electron
 ```
 
-The first desktop milestone writes an unpacked Windows app to
-`desktop-release-packager\Audio2txt-win32-x64`. Installer-based updates are the
-next milestone after the Electron shell is stable.
+The desktop build writes an unpacked Windows app to
+`desktop-release-packager\Audio2txt-win32-x64` and installer/update artifacts to
+`desktop-release-installer`:
+
+```text
+Audio2txt-Setup-0.1.4.exe
+Audio2txt-Setup-0.1.4.msi
+audio2txt-0.1.4-full.nupkg
+RELEASES
+```
+
+The `.nupkg` and `RELEASES` files are the Squirrel.Windows update feed pieces.
 
 ## Configuration
 

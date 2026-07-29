@@ -34,6 +34,8 @@ try {
     --extra-resource="$stage\package.json" `
     --extra-resource="$stage\README.md" `
     --extra-resource="$stage\requirements.txt"
+
+  node scripts/create-squirrel-installer.cjs
 } finally {
   Pop-Location
 }

@@ -7,5 +7,6 @@ contextBridge.exposeInMainWorld('audio2txtDesktop', {
   restartToUpdate: () => ipcRenderer.invoke('updater:restart'),
   onUpdateAvailable: (callback) => ipcRenderer.on('updater:available', (_event, payload) => callback(payload)),
   onUpdateNotAvailable: (callback) => ipcRenderer.on('updater:not-available', (_event, payload) => callback(payload)),
+  onUpdateDownloaded: (callback) => ipcRenderer.on('updater:downloaded', (_event, payload) => callback(payload)),
   onUpdateError: (callback) => ipcRenderer.on('updater:error', (_event, payload) => callback(payload)),
 })

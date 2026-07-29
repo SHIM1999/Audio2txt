@@ -1,5 +1,8 @@
-const { app, BrowserWindow, dialog, ipcMain, shell } = require('electron')
-const { autoUpdater } = require('electron-updater')
+if (require('electron-squirrel-startup')) {
+  process.exit(0)
+}
+
+const { app, autoUpdater, BrowserWindow, dialog, ipcMain, shell } = require('electron')
 const path = require('node:path')
 
 const isDev = Boolean(process.env.AUDIO2TXT_ELECTRON_DEV)
@@ -52,19 +55,27 @@ function createWindow() {
 }
 
 function configureUpdater() {
-  autoUpdater.autoDownload = false
-  autoUpdater.autoInstallOnAppQuit = true
+  if (!app.isPackaged) return
+
+  const feedUrl = `https://update.electronjs.org/SHIM1999/Audio2txt/win32-x64/${app.getVersion()}`
+  autoUpdater.setFeedURL({ url: feedUrl })
 
   autoUpdater.on('error', (error) => {
     mainWindow?.webContents.send('updater:error', error.message)
   })
 
-  autoUpdater.on('update-available', (info) => {
+  autoUpdater.on('update-available', () => {
+    const info = { version: 'newer' }
     mainWindow?.webContents.send('updater:available', info)
   })
 
-  autoUpdater.on('update-not-available', (info) => {
+  autoUpdater.on('update-not-available', () => {
+    const info = { version: app.getVersion() }
     mainWindow?.webContents.send('updater:not-available', info)
+  })
+
+  autoUpdater.on('update-downloaded', () => {
+    mainWindow?.webContents.send('updater:downloaded', { ready: true })
   })
 }
 
@@ -75,11 +86,8 @@ ipcMain.handle('updater:check', async () => {
     return { updateAvailable: false, message: 'Updater is available in packaged builds.' }
   }
 
-  const result = await autoUpdater.checkForUpdates()
-  return {
-    updateAvailable: Boolean(result?.updateInfo),
-    version: result?.updateInfo?.version || '',
-  }
+  autoUpdater.checkForUpdates()
+  return { updateAvailable: false, message: 'Checking for installer updates...' }
 })
 
 ipcMain.handle('updater:download', async () => {
@@ -87,12 +95,11 @@ ipcMain.handle('updater:download', async () => {
     return { ok: false, message: 'Updater is available in packaged builds.' }
   }
 
-  await autoUpdater.downloadUpdate()
-  return { ok: true }
+  return { ok: true, message: 'Squirrel downloads updates automatically after a successful check.' }
 })
 
 ipcMain.handle('updater:restart', () => {
-  autoUpdater.quitAndInstall(false, true)
+  autoUpdater.quitAndInstall()
 })
 
 app.whenReady().then(() => {

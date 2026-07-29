@@ -41,10 +41,25 @@ type UpdateStatus = {
   remoteDate?: string
   releaseUrl?: string
   assetName?: string
-  mode?: 'portable' | 'git'
+  mode?: 'portable' | 'git' | 'desktop'
   updateAvailable: boolean
   canInstall: boolean
   message: string
+}
+
+declare global {
+  interface Window {
+    audio2txtDesktop?: {
+      version: () => Promise<string>
+      checkForUpdates: () => Promise<{ updateAvailable?: boolean; message?: string; version?: string }>
+      downloadUpdate: () => Promise<{ ok?: boolean; message?: string }>
+      restartToUpdate: () => Promise<void>
+      onUpdateAvailable: (callback: (payload: { version?: string }) => void) => void
+      onUpdateNotAvailable: (callback: (payload: { version?: string }) => void) => void
+      onUpdateDownloaded: (callback: (payload: { ready?: boolean }) => void) => void
+      onUpdateError: (callback: (message: string) => void) => void
+    }
+  }
 }
 
 const apiUrl = 'http://localhost:3001/api/transcribe'
@@ -107,6 +122,59 @@ function App() {
 
     return () => window.clearInterval(timer)
   }, [isLoading])
+
+  useEffect(() => {
+    const desktop = window.audio2txtDesktop
+    if (!desktop) return undefined
+
+    desktop.onUpdateAvailable((payload) => {
+      setUpdateStatus((current) => ({
+        currentVersion: current?.currentVersion || 'desktop',
+        currentCommit: current?.currentCommit || 'installer',
+        latestVersion: payload.version || 'newer',
+        mode: 'desktop',
+        updateAvailable: true,
+        canInstall: false,
+        message: 'Installer update found. Downloading in the background...',
+      }))
+    })
+
+    desktop.onUpdateDownloaded(() => {
+      setUpdateStatus((current) => ({
+        currentVersion: current?.currentVersion || 'desktop',
+        currentCommit: current?.currentCommit || 'installer',
+        latestVersion: current?.latestVersion || 'newer',
+        mode: 'desktop',
+        updateAvailable: true,
+        canInstall: true,
+        message: 'Installer update downloaded. Click Install to restart into the new version.',
+      }))
+    })
+
+    desktop.onUpdateNotAvailable(() => {
+      setUpdateStatus((current) => ({
+        currentVersion: current?.currentVersion || 'desktop',
+        currentCommit: current?.currentCommit || 'installer',
+        mode: 'desktop',
+        updateAvailable: false,
+        canInstall: false,
+        message: 'You are on the latest installed version.',
+      }))
+    })
+
+    desktop.onUpdateError((message) => {
+      setUpdateStatus((current) => ({
+        currentVersion: current?.currentVersion || 'desktop',
+        currentCommit: current?.currentCommit || 'installer',
+        mode: 'desktop',
+        updateAvailable: false,
+        canInstall: false,
+        message,
+      }))
+    })
+
+    return undefined
+  }, [])
 
   function pickFile(nextFile?: File) {
     if (!nextFile) return
@@ -191,6 +259,21 @@ function App() {
     setUpdateStatus(null)
 
     try {
+      if (window.audio2txtDesktop) {
+        const currentVersion = await window.audio2txtDesktop.version()
+        const payload = await window.audio2txtDesktop.checkForUpdates()
+        setUpdateStatus({
+          currentVersion,
+          currentCommit: 'installer',
+          latestVersion: payload.version,
+          updateAvailable: Boolean(payload.updateAvailable),
+          canInstall: false,
+          mode: 'desktop',
+          message: payload.message || 'Checking for installer updates...',
+        })
+        return
+      }
+
       const response = await fetch(updateCheckUrl)
       const payload = await response.json()
 
@@ -216,6 +299,11 @@ function App() {
     setIsInstallingUpdate(true)
 
     try {
+      if (updateStatus?.mode === 'desktop' && window.audio2txtDesktop) {
+        await window.audio2txtDesktop.restartToUpdate()
+        return
+      }
+
       const response = await fetch(updateInstallUrl, { method: 'POST' })
       const payload = await response.json()
 
