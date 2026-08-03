@@ -10,12 +10,17 @@ import {
   Upload,
 } from 'lucide-react'
 import './App.css'
+import AudioWaveEditor from './AudioWaveEditor'
 import MascotSticker from './MascotSticker'
+import { createTrimmedWav, formatTimestamp } from './audioUtils'
+import type { AudioSelection } from './audioUtils'
 
 type Segment = {
   id: number
   start: string
   end: string
+  startSeconds?: number
+  endSeconds?: number
   text: string
 }
 
@@ -66,9 +71,27 @@ const apiUrl = 'http://localhost:3001/api/transcribe'
 const updateCheckUrl = 'http://localhost:3001/api/update/check'
 const updateInstallUrl = 'http://localhost:3001/api/update/install'
 const appName = 'Audio2txt'
+const qualityModel = 'medium'
 
 function buildTimestampedText(segments: Segment[]) {
   return segments.map((segment) => `[${segment.start} - ${segment.end}] ${segment.text}`).join('\n')
+}
+
+function shiftSegments(segments: Segment[], offsetSeconds: number) {
+  if (!offsetSeconds) return segments
+
+  return segments.map((segment) => {
+    const startSeconds = (segment.startSeconds ?? 0) + offsetSeconds
+    const endSeconds = (segment.endSeconds ?? startSeconds) + offsetSeconds
+
+    return {
+      ...segment,
+      startSeconds,
+      endSeconds,
+      start: formatTimestamp(startSeconds),
+      end: formatTimestamp(endSeconds),
+    }
+  })
 }
 
 function downloadBlob(blob: Blob, filename: string) {
@@ -83,11 +106,12 @@ function downloadBlob(blob: Blob, filename: string) {
 function App() {
   const inputRef = useRef<HTMLInputElement>(null)
   const [file, setFile] = useState<File | null>(null)
-  const [model, setModel] = useState('base')
+  const [audioSelection, setAudioSelection] = useState<AudioSelection | null>(null)
   const [language, setLanguage] = useState('ko')
   const [device, setDevice] = useState('auto')
   const [isDragging, setIsDragging] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [isCutting, setIsCutting] = useState(false)
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false)
   const [isInstallingUpdate, setIsInstallingUpdate] = useState(false)
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
@@ -179,6 +203,7 @@ function App() {
   function pickFile(nextFile?: File) {
     if (!nextFile) return
     setFile(nextFile)
+    setAudioSelection(null)
     setResult(null)
     setError('')
   }
@@ -203,13 +228,23 @@ function App() {
     setError('')
     setResult(null)
 
-    const formData = new FormData()
-    formData.append('audio', file)
-    formData.append('model', model)
-    formData.append('language', language)
-    formData.append('device', device)
-
     try {
+      let uploadFile = file
+      let timestampOffset = 0
+
+      if (audioSelection?.isCustom) {
+        setIsCutting(true)
+        uploadFile = await createTrimmedWav(file, audioSelection.start, audioSelection.end)
+        timestampOffset = audioSelection.start
+        setIsCutting(false)
+      }
+
+      const formData = new FormData()
+      formData.append('audio', uploadFile)
+      formData.append('model', qualityModel)
+      formData.append('language', language)
+      formData.append('device', device)
+
       const response = await fetch(apiUrl, {
         method: 'POST',
         body: formData,
@@ -220,15 +255,36 @@ function App() {
         throw new Error(payload.error || 'Transcription failed.')
       }
 
+      const segments = shiftSegments(payload.segments, timestampOffset)
+
       setResult({
         ...payload,
-        timestampedText: buildTimestampedText(payload.segments),
-        plainText: payload.segments.map((segment: Segment) => segment.text).join('\n'),
+        duration: audioSelection?.isCustom ? audioSelection.end - audioSelection.start : payload.duration,
+        segments,
+        timestampedText: buildTimestampedText(segments),
+        plainText: segments.map((segment: Segment) => segment.text).join('\n'),
       })
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Transcription failed.')
     } finally {
       setIsLoading(false)
+      setIsCutting(false)
+    }
+  }
+
+  async function downloadSelectedCut() {
+    if (!file || !audioSelection?.isCustom) return
+
+    setIsCutting(true)
+    setError('')
+
+    try {
+      const cutFile = await createTrimmedWav(file, audioSelection.start, audioSelection.end)
+      downloadBlob(cutFile, cutFile.name)
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Could not prepare the audio cut.')
+    } finally {
+      setIsCutting(false)
     }
   }
 
@@ -479,18 +535,11 @@ function App() {
               </select>
             </label>
 
-            <label>
-              Model
-              <select value={model} onChange={(event) => setModel(event.target.value)}>
-                <option value="tiny">Tiny - quickest test</option>
-                <option value="base">Base - fast default</option>
-                <option value="small">Small - balanced</option>
-                <option value="medium">Medium - higher quality</option>
-              </select>
-              <span className="field-hint">
-                Medium is slow on first run. Tiny/Base are best for quick checks.
-              </span>
-            </label>
+            <div className="quality-lock">
+              <span>Quality model</span>
+              <strong>Medium</strong>
+              <small>Best current transcription quality. For long audio, cut the range below first.</small>
+            </div>
 
             <label>
               Engine
@@ -501,19 +550,29 @@ function App() {
               </select>
             </label>
 
-            <button className="primary-button" type="button" onClick={transcribe} disabled={isLoading}>
+            <button className="primary-button" type="button" onClick={transcribe} disabled={isLoading || isCutting}>
               {isLoading ? <LoaderCircle className="spin" size={18} aria-hidden="true" /> : <Upload size={18} aria-hidden="true" />}
-              {isLoading ? 'Transcribing...' : 'Transcribe'}
+              {isCutting ? 'Preparing cut...' : isLoading ? 'Transcribing...' : 'Transcribe'}
             </button>
           </div>
         </div>
+
+        {file && (
+          <AudioWaveEditor
+            file={file}
+            selection={audioSelection}
+            disabled={isLoading || isCutting}
+            onSelectionChange={setAudioSelection}
+            onDownloadCut={downloadSelectedCut}
+          />
+        )}
 
         {isLoading && (
           <div className="processing-gauge" role="status" aria-live="polite">
             <div>
               <strong>Processing audio</strong>
               <span>
-                {device === 'cpu' ? 'CPU' : device === 'cuda' ? 'GPU' : 'Auto engine'} is transcribing your file.
+                {device === 'cpu' ? 'CPU' : device === 'cuda' ? 'GPU' : 'Auto engine'} is transcribing with Medium quality.
                 {' '}Elapsed {elapsedSeconds}s. First run may download the selected model.
               </span>
             </div>

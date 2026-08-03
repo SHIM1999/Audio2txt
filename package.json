@@ -1,10 +1,20 @@
 {
     "name":  "audio2txt",
     "productName":  "Audio2txt",
-    "version":  "0.1.5",
+    "version":  "0.1.6",
+    "type":  "module",
     "main":  "electron/main.cjs",
     "description":  "A local desktop transcription studio for turning audio into editable timestamped text.",
     "author":  "SHIM1999",
+    "scripts":  {
+                    "dev":  "concurrently \"npm run server\" \"vite --host 127.0.0.1\"",
+                    "server":  "node server/index.js",
+                    "build":  "tsc -b && vite build",
+                    "lint":  "oxlint src server electron scripts --deny-warnings",
+                    "electron":  "concurrently \"cross-env AUDIO2TXT_ELECTRON_DEV=1 npm run server\" \"vite --host 127.0.0.1\" \"wait-on http://127.0.0.1:5173 http://127.0.0.1:3001/api/health && cross-env AUDIO2TXT_ELECTRON_DEV=1 electron .\"",
+                    "package:portable":  "powershell -ExecutionPolicy Bypass -File scripts/package-portable-windows.ps1",
+                    "build:electron":  "powershell -ExecutionPolicy Bypass -File scripts/build-electron-windows.ps1"
+                },
     "dependencies":  {
                          "concurrently":  "^10.0.3",
                          "cors":  "^2.8.6",
@@ -17,13 +27,29 @@
                          "react":  "^19.2.7",
                          "react-dom":  "^19.2.7"
                      },
+    "devDependencies":  {
+                            "@electron/packager":  "^20.0.4",
+                            "@types/node":  "^24.13.2",
+                            "@types/react":  "^19.2.17",
+                            "@types/react-dom":  "^19.2.3",
+                            "@vitejs/plugin-react":  "^6.0.3",
+                            "cross-env":  "^10.1.0",
+                            "electron":  "^43.2.0",
+                            "electron-builder":  "^26.15.3",
+                            "electron-winstaller":  "^5.4.4",
+                            "oxlint":  "^1.71.0",
+                            "pkg":  "^5.8.1",
+                            "typescript":  "~6.0.2",
+                            "vite":  "^8.1.1",
+                            "wait-on":  "^9.1.0"
+                        },
     "build":  {
                   "appId":  "com.shim1999.audio2txt",
                   "electronVersion":  "43.2.0",
                   "extraMetadata":  {
                                         "name":  "audio2txt",
                                         "productName":  "Audio2txt",
-                                        "version":  "0.1.5",
+                                        "version":  "0.1.6",
                                         "main":  "electron/main.cjs"
                                     },
                   "artifactName":  "${productName}-${version}-${os}-${arch}.${ext}",

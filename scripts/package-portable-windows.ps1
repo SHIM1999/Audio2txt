@@ -1,11 +1,15 @@
 param(
-  [string]$Version = "0.1.5",
+  [string]$Version = "",
   [switch]$RebuildPython
 )
 
 $ErrorActionPreference = "Stop"
 
 $root = Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..")
+$packageJson = Get-Content -LiteralPath (Join-Path $root "package.json") -Raw | ConvertFrom-Json
+if (-not $Version) {
+  $Version = $packageJson.version
+}
 $releaseRoot = Join-Path $root ".release"
 $portableRoot = Join-Path $releaseRoot "Audio2txt-portable"
 $outDir = Join-Path $root "packages"

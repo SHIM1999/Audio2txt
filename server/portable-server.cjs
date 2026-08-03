@@ -85,7 +85,7 @@ app.post('/api/transcribe', upload.single('audio'), async (req, res) => {
       if (!shouldRetryOnCpu(error, device)) throw error
 
       result = await runTranscriber({ inputPath, model, language, device: 'cpu', jobId })
-      result.warning = 'Auto/GPU engine crashed, so Audio2txt retried safely with CPU. For this PC, choose CPU or Tiny/Base for faster stable runs.'
+      result.warning = 'Auto/GPU engine crashed, so Audio2txt retried safely with CPU. For this PC, keep Engine on CPU or cut a shorter range first.'
     }
 
     res.json(result)
@@ -165,7 +165,7 @@ function buildTranscriberError(code, stderr) {
   if (cleaned) return cleaned
 
   if (Number(code) === 3221225477) {
-    return 'The native transcription engine crashed on this PC. Try Engine: CPU and Model: Tiny or Base first.'
+    return 'The native transcription engine crashed on this PC. Try Engine: CPU, or cut a shorter range before transcribing.'
   }
 
   return `Transcriber exited with code ${code}.`
