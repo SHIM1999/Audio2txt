@@ -1,13 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ChangeEvent, DragEvent } from 'react'
 import {
+  ChevronDown,
+  ChevronUp,
   Clipboard,
   Download,
   FileAudio,
   FileText,
   LoaderCircle,
   RefreshCw,
+  Search,
+  Settings,
   Upload,
+  X,
 } from 'lucide-react'
 import './App.css'
 import AudioWaveEditor from './AudioWaveEditor'
@@ -73,6 +78,15 @@ const updateInstallUrl = 'http://localhost:3001/api/update/install'
 const appName = 'Audio2txt'
 const qualityModel = 'medium'
 
+function textMatches(value: string, query: string, caseSensitive: boolean) {
+  const cleanQuery = query.trim()
+  if (!cleanQuery) return false
+
+  return caseSensitive
+    ? value.includes(cleanQuery)
+    : value.toLocaleLowerCase().includes(cleanQuery.toLocaleLowerCase())
+}
+
 function buildTimestampedText(segments: Segment[]) {
   return segments.map((segment) => `[${segment.start} - ${segment.end}] ${segment.text}`).join('\n')
 }
@@ -105,10 +119,17 @@ function downloadBlob(blob: Blob, filename: string) {
 
 function App() {
   const inputRef = useRef<HTMLInputElement>(null)
+  const segmentRefs = useRef(new Map<number, HTMLTextAreaElement>())
   const [file, setFile] = useState<File | null>(null)
   const [audioSelection, setAudioSelection] = useState<AudioSelection | null>(null)
   const [language, setLanguage] = useState('ko')
   const [device, setDevice] = useState('auto')
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const [findQuery, setFindQuery] = useState('')
+  const [isFindCaseSensitive, setIsFindCaseSensitive] = useState(false)
+  const [shouldAutoFocusMatch, setShouldAutoFocusMatch] = useState(true)
+  const [pendingMatchFocus, setPendingMatchFocus] = useState(false)
+  const [activeMatchIndex, setActiveMatchIndex] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [isCutting, setIsCutting] = useState(false)
@@ -133,6 +154,13 @@ function App() {
 
   const baseName = useMemo(() => file?.name.replace(/\.[^.]+$/, '') || 'transcript', [file])
 
+  const matchedSegments = useMemo(() => {
+    if (!result || !findQuery.trim()) return []
+    return result.segments.filter((segment) => textMatches(segment.text, findQuery, isFindCaseSensitive))
+  }, [findQuery, isFindCaseSensitive, result])
+
+  const activeMatchId = matchedSegments[activeMatchIndex]?.id
+
   useEffect(() => {
     if (!isLoading) {
       setElapsedSeconds(0)
@@ -146,6 +174,19 @@ function App() {
 
     return () => window.clearInterval(timer)
   }, [isLoading])
+
+  useEffect(() => {
+    setActiveMatchIndex(0)
+    if (result && findQuery.trim() && shouldAutoFocusMatch) {
+      setPendingMatchFocus(true)
+    }
+  }, [findQuery, isFindCaseSensitive, result, shouldAutoFocusMatch])
+
+  useEffect(() => {
+    if (!pendingMatchFocus || !activeMatchId) return
+    focusSegment(activeMatchId)
+    setPendingMatchFocus(false)
+  }, [activeMatchId, pendingMatchFocus])
 
   useEffect(() => {
     const desktop = window.audio2txtDesktop
@@ -205,6 +246,7 @@ function App() {
     setFile(nextFile)
     setAudioSelection(null)
     setResult(null)
+    segmentRefs.current.clear()
     setError('')
   }
 
@@ -264,6 +306,7 @@ function App() {
         timestampedText: buildTimestampedText(segments),
         plainText: segments.map((segment: Segment) => segment.text).join('\n'),
       })
+      setPendingMatchFocus(shouldAutoFocusMatch && Boolean(findQuery.trim()))
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Transcription failed.')
     } finally {
@@ -303,6 +346,37 @@ function App() {
         plainText: segments.map((segment) => segment.text).join('\n'),
       }
     })
+  }
+
+  function setSegmentRef(id: number, element: HTMLTextAreaElement | null) {
+    if (element) {
+      segmentRefs.current.set(id, element)
+      return
+    }
+
+    segmentRefs.current.delete(id)
+  }
+
+  function focusSegment(id: number) {
+    const element = segmentRefs.current.get(id)
+    if (!element) return
+
+    element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    window.setTimeout(() => {
+      element.focus()
+    }, 160)
+  }
+
+  function moveMatch(direction: 1 | -1) {
+    if (!matchedSegments.length) return
+    const nextIndex = (activeMatchIndex + direction + matchedSegments.length) % matchedSegments.length
+    setActiveMatchIndex(nextIndex)
+    focusSegment(matchedSegments[nextIndex].id)
+  }
+
+  function clearFindQuery() {
+    setFindQuery('')
+    setActiveMatchIndex(0)
   }
 
   async function copyTranscript() {
@@ -464,8 +538,95 @@ function App() {
             <p className="eyebrow">{appName}</p>
             <h1>Polish every line after AI transcription.</h1>
           </div>
-          <MascotSticker />
+          <div className="masthead-tools">
+            <button
+              className="icon-button settings-toggle"
+              type="button"
+              onClick={() => setIsSettingsOpen((current) => !current)}
+              title="Open settings"
+              aria-expanded={isSettingsOpen}
+              aria-label="Open settings"
+            >
+              <Settings size={21} aria-hidden="true" />
+            </button>
+            <MascotSticker />
+          </div>
         </div>
+
+        {isSettingsOpen && (
+          <section className="settings-panel" aria-label="Settings">
+            <div className="settings-panel-header">
+              <div>
+                <strong>Settings</strong>
+                <span>Transcript focus and review helpers</span>
+              </div>
+              <button
+                className="icon-button"
+                type="button"
+                onClick={() => setIsSettingsOpen(false)}
+                title="Close settings"
+                aria-label="Close settings"
+              >
+                <X size={18} aria-hidden="true" />
+              </button>
+            </div>
+
+            <div className="find-setting">
+              <label>
+                Focus word after transcription
+                <div className="search-input">
+                  <Search size={17} aria-hidden="true" />
+                  <input
+                    type="text"
+                    value={findQuery}
+                    onChange={(event) => setFindQuery(event.target.value)}
+                    placeholder="Enter word or phrase"
+                  />
+                  {findQuery && (
+                    <button type="button" onClick={clearFindQuery} title="Clear search" aria-label="Clear search">
+                      <X size={16} aria-hidden="true" />
+                    </button>
+                  )}
+                </div>
+              </label>
+
+              <div className="settings-row">
+                <label className="check-setting">
+                  <input
+                    type="checkbox"
+                    checked={shouldAutoFocusMatch}
+                    onChange={(event) => setShouldAutoFocusMatch(event.target.checked)}
+                  />
+                  Auto focus first match
+                </label>
+                <label className="check-setting">
+                  <input
+                    type="checkbox"
+                    checked={isFindCaseSensitive}
+                    onChange={(event) => setIsFindCaseSensitive(event.target.checked)}
+                  />
+                  Case sensitive
+                </label>
+              </div>
+
+              <div className="match-tools">
+                <span>
+                  {findQuery.trim()
+                    ? `${matchedSegments.length} match${matchedSegments.length === 1 ? '' : 'es'}`
+                    : 'No filter set'}
+                </span>
+                <div>
+                  <button type="button" onClick={() => moveMatch(-1)} disabled={!matchedSegments.length} title="Previous match">
+                    <ChevronUp size={17} aria-hidden="true" />
+                  </button>
+                  <button type="button" onClick={() => moveMatch(1)} disabled={!matchedSegments.length} title="Next match">
+                    <ChevronDown size={17} aria-hidden="true" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
 
         <div className="update-strip">
           <div>
@@ -613,11 +774,18 @@ function App() {
           {result ? (
             <ol className="segments">
               {result.segments.map((segment) => (
-                <li key={segment.id}>
+                <li
+                  key={segment.id}
+                  className={[
+                    textMatches(segment.text, findQuery, isFindCaseSensitive) ? 'search-match' : '',
+                    segment.id === activeMatchId ? 'active-match' : '',
+                  ].filter(Boolean).join(' ')}
+                >
                   <time>
                     {segment.start} - {segment.end}
                   </time>
                   <textarea
+                    ref={(element) => setSegmentRef(segment.id, element)}
                     aria-label={`Transcript line ${segment.id}`}
                     value={segment.text}
                     onChange={(event) => updateSegmentText(segment.id, event.target.value)}
