@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import './App.css'
 import AudioWaveEditor from './AudioWaveEditor'
+import type { TranscriptMarker } from './AudioWaveEditor'
 import MascotSticker from './MascotSticker'
 import { createTrimmedWav, formatTimestamp } from './audioUtils'
 import type { AudioSelection } from './audioUtils'
@@ -130,6 +131,7 @@ function App() {
   const [shouldAutoFocusMatch, setShouldAutoFocusMatch] = useState(true)
   const [pendingMatchFocus, setPendingMatchFocus] = useState(false)
   const [activeMatchIndex, setActiveMatchIndex] = useState(0)
+  const [activeSegmentId, setActiveSegmentId] = useState<number | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [isCutting, setIsCutting] = useState(false)
@@ -160,6 +162,20 @@ function App() {
   }, [findQuery, isFindCaseSensitive, result])
 
   const activeMatchId = matchedSegments[activeMatchIndex]?.id
+
+  const transcriptMarkers = useMemo<TranscriptMarker[]>(() => {
+    if (!result) return []
+
+    return result.segments
+      .filter((segment) => typeof segment.startSeconds === 'number' && typeof segment.endSeconds === 'number')
+      .map((segment) => ({
+        id: segment.id,
+        start: segment.startSeconds || 0,
+        end: segment.endSeconds || segment.startSeconds || 0,
+        isActive: segment.id === activeSegmentId || segment.id === activeMatchId,
+        isMatch: textMatches(segment.text, findQuery, isFindCaseSensitive),
+      }))
+  }, [activeMatchId, activeSegmentId, findQuery, isFindCaseSensitive, result])
 
   useEffect(() => {
     if (!isLoading) {
@@ -246,6 +262,7 @@ function App() {
     setFile(nextFile)
     setAudioSelection(null)
     setResult(null)
+    setActiveSegmentId(null)
     segmentRefs.current.clear()
     setError('')
   }
@@ -361,6 +378,7 @@ function App() {
     const element = segmentRefs.current.get(id)
     if (!element) return
 
+    setActiveSegmentId(id)
     element.scrollIntoView({ behavior: 'smooth', block: 'center' })
     window.setTimeout(() => {
       element.focus()
@@ -371,7 +389,17 @@ function App() {
     if (!matchedSegments.length) return
     const nextIndex = (activeMatchIndex + direction + matchedSegments.length) % matchedSegments.length
     setActiveMatchIndex(nextIndex)
+    setActiveSegmentId(matchedSegments[nextIndex].id)
     focusSegment(matchedSegments[nextIndex].id)
+  }
+
+  function selectTranscriptMarker(id: number) {
+    const matchIndex = matchedSegments.findIndex((segment) => segment.id === id)
+    if (matchIndex >= 0) {
+      setActiveMatchIndex(matchIndex)
+    }
+
+    focusSegment(id)
   }
 
   function clearFindQuery() {
@@ -723,8 +751,10 @@ function App() {
             file={file}
             selection={audioSelection}
             disabled={isLoading || isCutting}
+            transcriptMarkers={transcriptMarkers}
             onSelectionChange={setAudioSelection}
             onDownloadCut={downloadSelectedCut}
+            onMarkerSelect={selectTranscriptMarker}
           />
         )}
 
@@ -788,6 +818,7 @@ function App() {
                     ref={(element) => setSegmentRef(segment.id, element)}
                     aria-label={`Transcript line ${segment.id}`}
                     value={segment.text}
+                    onFocus={() => setActiveSegmentId(segment.id)}
                     onChange={(event) => updateSegmentText(segment.id, event.target.value)}
                     rows={2}
                   />

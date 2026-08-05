@@ -512,6 +512,23 @@ button:disabled {
   touch-action: none;
 }
 
+.wave-map-legend {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.wave-map-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #8b3429;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
 .wave-toolbar {
   display: flex;
   flex-wrap: wrap;
