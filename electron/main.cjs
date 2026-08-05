@@ -4,6 +4,7 @@ if (require('electron-squirrel-startup')) {
 
 const { app, autoUpdater, BrowserWindow, dialog, ipcMain, shell } = require('electron')
 const fs = require('node:fs')
+const https = require('node:https')
 const path = require('node:path')
 
 const isDev = Boolean(process.env.AUDIO2TXT_ELECTRON_DEV)
@@ -115,6 +116,89 @@ function clearUpdatePackageCache() {
   return packagesPath
 }
 
+function compareVersions(left, right) {
+  const leftParts = String(left).replace(/^v/i, '').split('.').map((part) => Number.parseInt(part, 10) || 0)
+  const rightParts = String(right).replace(/^v/i, '').split('.').map((part) => Number.parseInt(part, 10) || 0)
+  const maxLength = Math.max(leftParts.length, rightParts.length)
+
+  for (let index = 0; index < maxLength; index += 1) {
+    const leftPart = leftParts[index] || 0
+    const rightPart = rightParts[index] || 0
+
+    if (leftPart > rightPart) return 1
+    if (leftPart < rightPart) return -1
+  }
+
+  return 0
+}
+
+function requestJson(url) {
+  return new Promise((resolve, reject) => {
+    const request = https.get(
+      url,
+      {
+        headers: {
+          Accept: 'application/vnd.github+json',
+          'User-Agent': 'Audio2txt-updater',
+        },
+      },
+      (response) => {
+        let body = ''
+        response.setEncoding('utf8')
+        response.on('data', (chunk) => {
+          body += chunk
+        })
+        response.on('end', () => {
+          if (!response.statusCode || response.statusCode < 200 || response.statusCode >= 300) {
+            reject(new Error(`GitHub returned ${response.statusCode || 'an unknown status'}.`))
+            return
+          }
+
+          try {
+            resolve(JSON.parse(body))
+          } catch (error) {
+            reject(error)
+          }
+        })
+      },
+    )
+
+    request.on('error', reject)
+    request.setTimeout(15000, () => {
+      request.destroy(new Error('Update check timed out.'))
+    })
+  })
+}
+
+async function checkGitHubRelease() {
+  const currentVersion = app.getVersion()
+  const latestRelease = await requestJson('https://api.github.com/repos/SHIM1999/Audio2txt/releases/latest')
+  const latestVersion = String(latestRelease.tag_name || '').replace(/^v/i, '')
+  const setupAsset = Array.isArray(latestRelease.assets)
+    ? latestRelease.assets.find((asset) => /^Audio2txt-Setup-.+\.exe$/i.test(asset.name))
+    : null
+
+  if (!latestVersion) {
+    throw new Error('Could not read the latest release version.')
+  }
+
+  if (compareVersions(latestVersion, currentVersion) <= 0) {
+    return {
+      updateAvailable: false,
+      version: latestVersion,
+      message: `You are on the latest version (${currentVersion}).`,
+    }
+  }
+
+  return {
+    updateAvailable: true,
+    version: latestVersion,
+    releaseUrl: setupAsset?.browser_download_url || latestRelease.html_url,
+    assetName: setupAsset?.name,
+    message: `Version ${latestVersion} is ready. Download and run the installer to update.`,
+  }
+}
+
 ipcMain.handle('app:version', () => app.getVersion())
 
 ipcMain.handle('settings:get-export-folder', () => {
@@ -168,8 +252,7 @@ ipcMain.handle('updater:check', async () => {
   }
 
   clearUpdatePackageCache()
-  autoUpdater.checkForUpdates()
-  return { updateAvailable: false, message: 'Checking for installer updates after refreshing the update cache...' }
+  return checkGitHubRelease()
 })
 
 ipcMain.handle('updater:download', async () => {

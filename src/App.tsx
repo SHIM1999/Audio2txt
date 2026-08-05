@@ -67,7 +67,7 @@ declare global {
       chooseExportFolder: () => Promise<{ canceled?: boolean; exportFolder: string }>
       clearExportFolder: () => Promise<{ exportFolder: string }>
       saveExportFile: (payload: { filename: string; content: string | ArrayBuffer }) => Promise<{ ok?: boolean; path?: string; message?: string }>
-      checkForUpdates: () => Promise<{ updateAvailable?: boolean; message?: string; version?: string }>
+      checkForUpdates: () => Promise<{ updateAvailable?: boolean; message?: string; version?: string; releaseUrl?: string; assetName?: string; canInstall?: boolean }>
       downloadUpdate: () => Promise<{ ok?: boolean; message?: string }>
       repairUpdateCache: () => Promise<{ ok?: boolean; message?: string; path?: string }>
       restartToUpdate: () => Promise<void>
@@ -452,7 +452,9 @@ function App() {
           currentCommit: 'installer',
           latestVersion: payload.version,
           updateAvailable: Boolean(payload.updateAvailable),
-          canInstall: false,
+          canInstall: Boolean(payload.canInstall),
+          releaseUrl: payload.releaseUrl,
+          assetName: payload.assetName,
           mode: 'desktop',
           message: payload.message || 'Checking for installer updates...',
         })

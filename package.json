@@ -1,7 +1,7 @@
 {
     "name":  "audio2txt",
     "productName":  "Audio2txt",
-    "version":  "0.1.8",
+    "version":  "0.1.9",
     "type":  "module",
     "main":  "electron/main.cjs",
     "description":  "A local desktop transcription studio for turning audio into editable timestamped text.",
@@ -49,7 +49,7 @@
                   "extraMetadata":  {
                                         "name":  "audio2txt",
                                         "productName":  "Audio2txt",
-                                        "version":  "0.1.8",
+                                        "version":  "0.1.9",
                                         "main":  "electron/main.cjs"
                                     },
                   "artifactName":  "${productName}-${version}-${os}-${arch}.${ext}",
