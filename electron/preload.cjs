@@ -8,6 +8,7 @@ contextBridge.exposeInMainWorld('audio2txtDesktop', {
   saveExportFile: (payload) => ipcRenderer.invoke('export:save-file', payload),
   checkForUpdates: () => ipcRenderer.invoke('updater:check'),
   downloadUpdate: () => ipcRenderer.invoke('updater:download'),
+  repairUpdateCache: () => ipcRenderer.invoke('updater:repair-cache'),
   restartToUpdate: () => ipcRenderer.invoke('updater:restart'),
   onUpdateAvailable: (callback) => ipcRenderer.on('updater:available', (_event, payload) => callback(payload)),
   onUpdateNotAvailable: (callback) => ipcRenderer.on('updater:not-available', (_event, payload) => callback(payload)),

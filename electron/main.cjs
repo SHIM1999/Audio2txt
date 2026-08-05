@@ -100,6 +100,21 @@ function getSettingsPath() {
   return path.join(app.getPath('userData'), 'settings.json')
 }
 
+function getUpdatePackageCachePath() {
+  if (app.isPackaged) {
+    return path.resolve(path.dirname(process.execPath), '..', 'packages')
+  }
+
+  return path.join(app.getPath('localappdata'), 'audio2txt', 'packages')
+}
+
+function clearUpdatePackageCache() {
+  const packagesPath = getUpdatePackageCachePath()
+  fs.rmSync(packagesPath, { recursive: true, force: true })
+  fs.mkdirSync(packagesPath, { recursive: true })
+  return packagesPath
+}
+
 ipcMain.handle('app:version', () => app.getVersion())
 
 ipcMain.handle('settings:get-export-folder', () => {
@@ -152,8 +167,9 @@ ipcMain.handle('updater:check', async () => {
     return { updateAvailable: false, message: 'Updater is available in packaged builds.' }
   }
 
+  clearUpdatePackageCache()
   autoUpdater.checkForUpdates()
-  return { updateAvailable: false, message: 'Checking for installer updates...' }
+  return { updateAvailable: false, message: 'Checking for installer updates after refreshing the update cache...' }
 })
 
 ipcMain.handle('updater:download', async () => {
@@ -161,7 +177,17 @@ ipcMain.handle('updater:download', async () => {
     return { ok: false, message: 'Updater is available in packaged builds.' }
   }
 
+  clearUpdatePackageCache()
   return { ok: true, message: 'Squirrel downloads updates automatically after a successful check.' }
+})
+
+ipcMain.handle('updater:repair-cache', async () => {
+  const deletedPath = clearUpdatePackageCache()
+  return {
+    ok: true,
+    path: deletedPath,
+    message: 'Updater cache repaired. Try Check again.',
+  }
 })
 
 ipcMain.handle('updater:restart', () => {

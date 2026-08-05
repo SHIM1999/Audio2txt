@@ -69,6 +69,7 @@ declare global {
       saveExportFile: (payload: { filename: string; content: string | ArrayBuffer }) => Promise<{ ok?: boolean; path?: string; message?: string }>
       checkForUpdates: () => Promise<{ updateAvailable?: boolean; message?: string; version?: string }>
       downloadUpdate: () => Promise<{ ok?: boolean; message?: string }>
+      repairUpdateCache: () => Promise<{ ok?: boolean; message?: string; path?: string }>
       restartToUpdate: () => Promise<void>
       onUpdateAvailable: (callback: (payload: { version?: string }) => void) => void
       onUpdateNotAvailable: (callback: (payload: { version?: string }) => void) => void
@@ -144,6 +145,7 @@ function App() {
   const [isCutting, setIsCutting] = useState(false)
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false)
   const [isInstallingUpdate, setIsInstallingUpdate] = useState(false)
+  const [isRepairingUpdate, setIsRepairingUpdate] = useState(false)
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
   const [error, setError] = useState('')
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus | null>(null)
@@ -478,6 +480,35 @@ function App() {
     }
   }
 
+  async function repairUpdateCache() {
+    if (!window.audio2txtDesktop) return
+
+    setIsRepairingUpdate(true)
+
+    try {
+      const payload = await window.audio2txtDesktop.repairUpdateCache()
+      setUpdateStatus({
+        currentVersion: await window.audio2txtDesktop.version(),
+        currentCommit: 'installer',
+        updateAvailable: false,
+        canInstall: false,
+        mode: 'desktop',
+        message: payload.message || 'Updater cache repaired. Try Check again.',
+      })
+    } catch (caught) {
+      setUpdateStatus({
+        currentVersion: 'unknown',
+        currentCommit: 'installer',
+        updateAvailable: false,
+        canInstall: false,
+        mode: 'desktop',
+        message: caught instanceof Error ? caught.message : 'Could not repair updater cache.',
+      })
+    } finally {
+      setIsRepairingUpdate(false)
+    }
+  }
+
   async function installUpdate() {
     setIsInstallingUpdate(true)
 
@@ -730,7 +761,11 @@ function App() {
             </span>
           </div>
           <div className="update-actions">
-            <button type="button" onClick={checkForUpdates} disabled={isCheckingUpdate || isInstallingUpdate}>
+            <button type="button" onClick={repairUpdateCache} disabled={!window.audio2txtDesktop || isCheckingUpdate || isInstallingUpdate || isRepairingUpdate}>
+              <RefreshCw className={isRepairingUpdate ? 'spin' : ''} size={17} aria-hidden="true" />
+              {isRepairingUpdate ? 'Repairing...' : 'Repair'}
+            </button>
+            <button type="button" onClick={checkForUpdates} disabled={isCheckingUpdate || isInstallingUpdate || isRepairingUpdate}>
               <RefreshCw className={isCheckingUpdate ? 'spin' : ''} size={17} aria-hidden="true" />
               {isCheckingUpdate ? 'Checking...' : 'Check'}
             </button>
@@ -740,7 +775,8 @@ function App() {
               disabled={
                 !updateStatus?.updateAvailable ||
                 (!updateStatus.canInstall && !updateStatus.releaseUrl) ||
-                isInstallingUpdate
+                isInstallingUpdate ||
+                isRepairingUpdate
               }
             >
               <Download size={17} aria-hidden="true" />
