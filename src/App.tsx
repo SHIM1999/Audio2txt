@@ -22,6 +22,8 @@ import MascotSticker from './MascotSticker'
 import { createTrimmedWav, formatTimestamp } from './audioUtils'
 import type { AudioSelection } from './audioUtils'
 
+declare const __APP_VERSION__: string
+
 type Segment = {
   id: number
   start: string
@@ -148,6 +150,8 @@ function App() {
   const [isRepairingUpdate, setIsRepairingUpdate] = useState(false)
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
   const [error, setError] = useState('')
+  const [currentTime, setCurrentTime] = useState(() => new Date())
+  const [statusVersion, setStatusVersion] = useState(__APP_VERSION__)
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus | null>(null)
   const [result, setResult] = useState<TranscriptResult | null>(null)
 
@@ -171,6 +175,9 @@ function App() {
   }, [findQuery, isFindCaseSensitive, result])
 
   const activeMatchId = matchedSegments[activeMatchIndex]?.id
+  const statusTime = useMemo(() => {
+    return currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+  }, [currentTime])
 
   const transcriptMarkers = useMemo<TranscriptMarker[]>(() => {
     if (!result) return []
@@ -201,6 +208,14 @@ function App() {
   }, [isLoading])
 
   useEffect(() => {
+    const timer = window.setInterval(() => {
+      setCurrentTime(new Date())
+    }, 1000)
+
+    return () => window.clearInterval(timer)
+  }, [])
+
+  useEffect(() => {
     setActiveMatchIndex(0)
     if (result && findQuery.trim() && shouldAutoFocusMatch) {
       setPendingMatchFocus(true)
@@ -217,6 +232,7 @@ function App() {
     const desktop = window.audio2txtDesktop
     if (!desktop) return undefined
 
+    desktop.version().then(setStatusVersion).catch(() => setStatusVersion(__APP_VERSION__))
     desktop.getExportFolder().then(setExportFolder).catch(() => setExportFolder(''))
 
     desktop.onUpdateAvailable((payload) => {
@@ -934,6 +950,10 @@ function App() {
           )}
         </section>
       </section>
+      <div className="mini-status-bar" aria-label="App status">
+        <span>v{statusVersion}</span>
+        <time>{statusTime}</time>
+      </div>
     </main>
   )
 }
