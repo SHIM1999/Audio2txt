@@ -2,6 +2,10 @@ const { contextBridge, ipcRenderer } = require('electron')
 
 contextBridge.exposeInMainWorld('audio2txtDesktop', {
   version: () => ipcRenderer.invoke('app:version'),
+  getExportFolder: () => ipcRenderer.invoke('settings:get-export-folder'),
+  chooseExportFolder: () => ipcRenderer.invoke('settings:choose-export-folder'),
+  clearExportFolder: () => ipcRenderer.invoke('settings:clear-export-folder'),
+  saveExportFile: (payload) => ipcRenderer.invoke('export:save-file', payload),
   checkForUpdates: () => ipcRenderer.invoke('updater:check'),
   downloadUpdate: () => ipcRenderer.invoke('updater:download'),
   restartToUpdate: () => ipcRenderer.invoke('updater:restart'),

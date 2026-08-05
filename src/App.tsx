@@ -7,6 +7,7 @@ import {
   Download,
   FileAudio,
   FileText,
+  FolderOpen,
   LoaderCircle,
   RefreshCw,
   Search,
@@ -62,6 +63,10 @@ declare global {
   interface Window {
     audio2txtDesktop?: {
       version: () => Promise<string>
+      getExportFolder: () => Promise<string>
+      chooseExportFolder: () => Promise<{ canceled?: boolean; exportFolder: string }>
+      clearExportFolder: () => Promise<{ exportFolder: string }>
+      saveExportFile: (payload: { filename: string; content: string | ArrayBuffer }) => Promise<{ ok?: boolean; path?: string; message?: string }>
       checkForUpdates: () => Promise<{ updateAvailable?: boolean; message?: string; version?: string }>
       downloadUpdate: () => Promise<{ ok?: boolean; message?: string }>
       restartToUpdate: () => Promise<void>
@@ -126,6 +131,8 @@ function App() {
   const [language, setLanguage] = useState('ko')
   const [device, setDevice] = useState('auto')
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const [exportFolder, setExportFolder] = useState('')
+  const [exportStatus, setExportStatus] = useState('')
   const [findQuery, setFindQuery] = useState('')
   const [isFindCaseSensitive, setIsFindCaseSensitive] = useState(false)
   const [shouldAutoFocusMatch, setShouldAutoFocusMatch] = useState(true)
@@ -208,6 +215,8 @@ function App() {
     const desktop = window.audio2txtDesktop
     if (!desktop) return undefined
 
+    desktop.getExportFolder().then(setExportFolder).catch(() => setExportFolder(''))
+
     desktop.onUpdateAvailable((payload) => {
       setUpdateStatus((current) => ({
         currentVersion: current?.currentVersion || 'desktop',
@@ -256,6 +265,22 @@ function App() {
 
     return undefined
   }, [])
+
+  async function chooseExportFolder() {
+    if (!window.audio2txtDesktop) return
+
+    const payload = await window.audio2txtDesktop.chooseExportFolder()
+    setExportFolder(payload.exportFolder || '')
+    setExportStatus(payload.canceled ? '' : 'Export folder saved.')
+  }
+
+  async function clearExportFolder() {
+    if (!window.audio2txtDesktop) return
+
+    const payload = await window.audio2txtDesktop.clearExportFolder()
+    setExportFolder(payload.exportFolder || '')
+    setExportStatus('Export folder cleared.')
+  }
 
   function pickFile(nextFile?: File) {
     if (!nextFile) return
@@ -494,12 +519,29 @@ function App() {
     window.open(updateStatus.releaseUrl, '_blank', 'noopener,noreferrer')
   }
 
-  function exportTxt() {
+  async function saveOrDownload(blob: Blob, filename: string, textContent?: string) {
+    if (window.audio2txtDesktop && exportFolder) {
+      const content = textContent ?? await blob.arrayBuffer()
+      const payload = await window.audio2txtDesktop.saveExportFile({ filename, content })
+
+      if (!payload.ok) {
+        setError(payload.message || 'Could not save export file.')
+        return
+      }
+
+      setExportStatus(`Saved ${filename}`)
+      return
+    }
+
+    downloadBlob(blob, filename)
+  }
+
+  async function exportTxt() {
     if (!result) return
     const blob = new Blob([transcriptText], {
       type: 'text/plain;charset=utf-8',
     })
-    downloadBlob(blob, `${baseName}-timestamped.txt`)
+    await saveOrDownload(blob, `${baseName}-timestamped.txt`, transcriptText)
   }
 
   async function exportDocx() {
@@ -555,7 +597,7 @@ function App() {
     })
 
     const blob = await Packer.toBlob(doc)
-    downloadBlob(blob, `${baseName}-timestamped.docx`)
+    await saveOrDownload(blob, `${baseName}-timestamped.docx`)
   }
 
   return (
@@ -600,6 +642,28 @@ function App() {
             </div>
 
             <div className="find-setting">
+              <div className="export-setting">
+                <div>
+                  <strong>Export folder</strong>
+                  <span>
+                    {window.audio2txtDesktop
+                      ? exportFolder || 'No folder selected. Exports will use browser downloads.'
+                      : 'Available in the installed desktop app.'}
+                  </span>
+                </div>
+                <div className="export-actions">
+                  <button type="button" onClick={chooseExportFolder} disabled={!window.audio2txtDesktop}>
+                    <FolderOpen size={17} aria-hidden="true" />
+                    Choose
+                  </button>
+                  <button type="button" onClick={clearExportFolder} disabled={!window.audio2txtDesktop || !exportFolder}>
+                    <X size={16} aria-hidden="true" />
+                    Clear
+                  </button>
+                </div>
+                {exportStatus && <p>{exportStatus}</p>}
+              </div>
+
               <label>
                 Focus word after transcription
                 <div className="search-input">

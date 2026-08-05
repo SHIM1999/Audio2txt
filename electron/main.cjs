@@ -3,6 +3,7 @@ if (require('electron-squirrel-startup')) {
 }
 
 const { app, autoUpdater, BrowserWindow, dialog, ipcMain, shell } = require('electron')
+const fs = require('node:fs')
 const path = require('node:path')
 
 const isDev = Boolean(process.env.AUDIO2TXT_ELECTRON_DEV)
@@ -81,7 +82,70 @@ function configureUpdater() {
   })
 }
 
+function readSettings() {
+  try {
+    return JSON.parse(fs.readFileSync(getSettingsPath(), 'utf8'))
+  } catch {
+    return {}
+  }
+}
+
+function writeSettings(settings) {
+  const settingsPath = getSettingsPath()
+  fs.mkdirSync(path.dirname(settingsPath), { recursive: true })
+  fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf8')
+}
+
+function getSettingsPath() {
+  return path.join(app.getPath('userData'), 'settings.json')
+}
+
 ipcMain.handle('app:version', () => app.getVersion())
+
+ipcMain.handle('settings:get-export-folder', () => {
+  return readSettings().exportFolder || ''
+})
+
+ipcMain.handle('settings:choose-export-folder', async () => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: 'Choose Audio2txt export folder',
+    properties: ['openDirectory', 'createDirectory'],
+  })
+
+  if (result.canceled || !result.filePaths[0]) {
+    return { canceled: true, exportFolder: readSettings().exportFolder || '' }
+  }
+
+  const exportFolder = result.filePaths[0]
+  writeSettings({ ...readSettings(), exportFolder })
+  return { canceled: false, exportFolder }
+})
+
+ipcMain.handle('settings:clear-export-folder', () => {
+  writeSettings({ ...readSettings(), exportFolder: '' })
+  return { exportFolder: '' }
+})
+
+ipcMain.handle('export:save-file', async (_event, payload) => {
+  const exportFolder = readSettings().exportFolder
+  if (!exportFolder) {
+    return { ok: false, message: 'No export folder is selected.' }
+  }
+
+  fs.mkdirSync(exportFolder, { recursive: true })
+
+  const safeFilename = path.basename(String(payload?.filename || 'audio2txt-export.txt'))
+  const outputPath = path.join(exportFolder, safeFilename)
+  const content = payload?.content
+
+  if (typeof content === 'string') {
+    fs.writeFileSync(outputPath, content, 'utf8')
+  } else {
+    fs.writeFileSync(outputPath, Buffer.from(new Uint8Array(content)))
+  }
+
+  return { ok: true, path: outputPath }
+})
 
 ipcMain.handle('updater:check', async () => {
   if (!app.isPackaged) {
