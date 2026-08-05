@@ -139,15 +139,10 @@ function AudioWaveEditor({
         const markerStart = clamp(timeToX(marker.start), 0, canvasWidth)
         const markerEnd = clamp(timeToX(Math.max(marker.end, marker.start + 0.4)), 0, canvasWidth)
         const width = Math.max(4, markerEnd - markerStart)
-        const color = marker.isActive ? '#d93f2f' : '#ff6b5a'
-
         context.fillStyle = marker.isActive ? 'rgba(217, 63, 47, 0.28)' : 'rgba(255, 107, 90, 0.18)'
         context.fillRect(markerStart, 0, width, canvasHeight)
-        context.fillStyle = color
+        context.fillStyle = marker.isActive ? '#d93f2f' : '#ff6b5a'
         context.fillRect(markerStart, 0, marker.isActive ? 5 : 3, canvasHeight)
-        context.beginPath()
-        context.arc(markerStart + width / 2, marker.isActive ? 23 : 31, marker.isActive ? 8 : 6, 0, Math.PI * 2)
-        context.fill()
       })
   }, [duration, peaks, selectedEnd, selectedStart, timeToX, transcriptMarkers, visibleEnd, visibleStart])
 
